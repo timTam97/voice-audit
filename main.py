@@ -69,31 +69,27 @@ async def check_audit_log() -> bool:
 async def diff_voice(
     before: discord.VoiceState,
     after: discord.VoiceState,
-    update: List[str],
     trigger: bool,
     embed_data: Dict,
-    field_data: Dict
-) -> Tuple[List[str], bool, Dict, Dict]:
+    field_data: Dict,
+) -> Tuple[bool, Dict, Dict]:
     prev_voice = before.channel
     next_voice = after.channel
     if prev_voice != next_voice:
         if prev_voice is None:
-            # update.append(" joined **{}**".format(next_voice.name))
             embed_data["title"] = "User Join"
             embed_data["color"] = 0x00FF00
             field_data["value"] = next_voice.name
         elif next_voice is None:
-            # update.append(" left **{}**".format(prev_voice.name))
             embed_data["title"] = "User Left"
             embed_data["color"] = 0xFF0000
             field_data["value"] = prev_voice.name
         elif prev_voice is not None and next_voice is not None:
-            # update.append(" moved from **{}** to **{}**".format(prev_voice, next_voice))
             embed_data["title"] = "User Moved"
             embed_data["color"] = 0x00FFFF
             field_data["value"] = prev_voice.name + " ➡ " + next_voice.name
         trigger = True
-    return update, trigger, embed_data, field_data
+    return trigger, embed_data, field_data
 
 
 @client.event
@@ -103,26 +99,20 @@ async def on_voice_state_update(
     the_date = datetime.datetime.fromtimestamp(time.time()).strftime(
         "%H:%M, %A %d %B %Y"
     )
-    update = ["**" + member.name + "#" + member.discriminator + "**"]
     trigger = False
     await check_audit_log()
 
     embed_dict = {}
     field_dict = {}
-    update, trigger, embed_dict, field_dict = await diff_voice(before, after, update, trigger, embed_dict, field_dict)
+    trigger, embed_dict, field_dict = await diff_voice(
+        before, after, trigger, embed_dict, field_dict
+    )
 
-    voice_embed = discord.Embed(**embed_dict)
-    voice_embed.add_field(name=member.name, **field_dict)
-    voice_embed.set_footer(text=the_date)
-    # embedVar.add_field(name="Field1", value="hi", inline=False)
-    # embedVar.add_field(name="Field2", value="hi2", inline=False)
-
-    # await audit_channel.send(embed=embedVar)
-    # update, trigger = await diff_deaf(before, after, update, trigger)
-    # update, trigger = await diff_mute(before, after, update, trigger)
     if trigger:
+        voice_embed = discord.Embed(**embed_dict)
+        voice_embed.add_field(name=member.name, **field_dict)
+        voice_embed.set_footer(text=the_date)
         await audit_channel.send(embed=voice_embed)
-        # await audit_channel.send("ㅤㅤ\n[" + the_date + "]\n" + "".join(update) + "\nㅤㅤ")
 
 
 @client.event
