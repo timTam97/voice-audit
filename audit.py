@@ -1,9 +1,10 @@
 import datetime
+import time
+from typing import Tuple, Dict
 
 import discord
-from typing import List, Tuple, Dict
+
 import auth
-import time
 
 client = discord.Client()
 audit_channel: discord.TextChannel = None
@@ -60,7 +61,7 @@ async def check_audit_log() -> bool:
                             )
                             hit = True
         if audit.action.name == "member_move":
-            print()  # TODO
+            await audit_channel.send("**{}** likely moved the below person.".format(instigator))
         if hit:
             await audit_channel.send("".join(message) + "\nㅤㅤ")
         return hit
