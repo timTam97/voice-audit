@@ -89,12 +89,12 @@ async def on_voice_state_update(
     all_members = []
     for channel in main_guild.voice_channels:
         all_members.append(channel.members)
-    member_count = len([item for sublist in all_members for item in sublist])
+    member_count = sum(map(lambda x: len(x), all_members))
 
     the_date = datetime.datetime.now().strftime("%H:%M, %A %d %B %Y")
-    trigger = False
     await check_audit_log()
 
+    trigger = False
     embed_dict = {}
     field_dict = {}
     trigger, embed_dict, field_dict = await diff_voice(
@@ -102,12 +102,13 @@ async def on_voice_state_update(
     )
 
     if trigger:
-        voice_embed = discord.Embed(**embed_dict)
-        voice_embed.add_field(name=member.name, **field_dict)
-        voice_embed.set_footer(
-            text="{}\n{} in all voice channels".format(the_date, member_count)
+        await audit_channel.send(
+            embed=discord.Embed(**embed_dict)
+            .add_field(**field_dict, name=member.name)
+            .set_footer(
+                text="{}\n{} in all voice channels".format(the_date, member_count)
+            )
         )
-        await audit_channel.send(embed=voice_embed)
 
 
 @client.event
