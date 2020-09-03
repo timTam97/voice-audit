@@ -1,5 +1,4 @@
 import datetime
-import time
 from typing import Tuple, Dict
 
 import discord
@@ -11,60 +10,50 @@ audit_channel: discord.TextChannel = None
 main_guild: discord.Guild = None
 
 
-async def check_audit_log() -> bool:
-    audits = await main_guild.audit_logs(limit=1).flatten()
-    for audit in audits:
-        if datetime.datetime.utcnow() - audit.created_at > datetime.timedelta(
-            seconds=3
-        ):
-            break
-        the_date = datetime.datetime.fromtimestamp(time.time()).strftime(
-            "%H:%M, %A %d %B %Y"
-        )
-        message = ["ㅤㅤ\n[" + the_date + "]\n"]
-        instigator = audit.user
-        affected = audit.target
-        hit = False
-        if audit.action.name == "member_update":
-            for prev_data in audit.before:
-                for next_data in audit.after:
-                    prev_key, prev_val = prev_data
-                    next_key, next_val = next_data
-                    if prev_key == "mute" and next_key == "mute":
-                        if prev_val and not next_val:
-                            message.append(
-                                "**{}** was un-server muted by **{}**".format(
-                                    affected, instigator
-                                )
+async def check_audit_log() -> None:
+    audit = (await main_guild.audit_logs(limit=1).flatten())[0]
+    if datetime.datetime.utcnow() - audit.created_at > datetime.timedelta(seconds=3):
+        return
+    the_date = datetime.datetime.now().strftime("%H:%M, %A %d %B %Y")
+    message = ["\u3164\n[" + the_date + "]\n"]
+    instigator = audit.user
+    affected = audit.target
+    hit = False
+    if audit.action.name == "member_update":
+        for prev_key, prev_val in audit.before:
+            for next_key, next_val in audit.after:
+                if prev_key == "mute" and next_key == "mute":
+                    if prev_val and not next_val:
+                        message.append(
+                            "**{}** was un-server muted by **{}**".format(
+                                affected, instigator
                             )
-                            hit = True
-                        elif not prev_val and next_val:
-                            message.append(
-                                "**{}** was server muted by **{}**".format(
-                                    affected, instigator
-                                )
+                        )
+                        hit = True
+                    elif not prev_val and next_val:
+                        message.append(
+                            "**{}** was server muted by **{}**".format(
+                                affected, instigator
                             )
-                            hit = True
-                    elif prev_key == "deaf" and next_key == "deaf":
-                        if prev_val and not next_val:
-                            message.append(
-                                "**{}** was un-server deafened by **{}**".format(
-                                    affected, instigator
-                                )
+                        )
+                        hit = True
+                elif prev_key == "deaf" and next_key == "deaf":
+                    if prev_val and not next_val:
+                        message.append(
+                            "**{}** was un-server deafened by **{}**".format(
+                                affected, instigator
                             )
-                            hit = True
-                        elif not prev_val and next_val:
-                            message.append(
-                                "**{}** was server deafened by **{}**".format(
-                                    affected, instigator
-                                )
+                        )
+                        hit = True
+                    elif not prev_val and next_val:
+                        message.append(
+                            "**{}** was server deafened by **{}**".format(
+                                affected, instigator
                             )
-                            hit = True
-        if audit.action.name == "member_move":
-            await audit_channel.send("**{}** likely moved the below person.".format(instigator))
-        if hit:
-            await audit_channel.send("".join(message) + "\nㅤㅤ")
-        return hit
+                        )
+                        hit = True
+    if hit:
+        await audit_channel.send("".join(message) + "\n\u3164")
 
 
 async def diff_voice(
@@ -97,9 +86,12 @@ async def diff_voice(
 async def on_voice_state_update(
     member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
 ):
-    the_date = datetime.datetime.fromtimestamp(time.time()).strftime(
-        "%H:%M, %A %d %B %Y"
-    )
+    all_members = []
+    for channel in main_guild.voice_channels:
+        all_members.append(channel.members)
+    member_count = len([item for sublist in all_members for item in sublist])
+
+    the_date = datetime.datetime.now().strftime("%H:%M, %A %d %B %Y")
     trigger = False
     await check_audit_log()
 
@@ -112,7 +104,9 @@ async def on_voice_state_update(
     if trigger:
         voice_embed = discord.Embed(**embed_dict)
         voice_embed.add_field(name=member.name, **field_dict)
-        voice_embed.set_footer(text=the_date)
+        voice_embed.set_footer(
+            text="{}\n{} in all voice channels".format(the_date, member_count)
+        )
         await audit_channel.send(embed=voice_embed)
 
 
