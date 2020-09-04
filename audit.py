@@ -120,7 +120,7 @@ async def on_ready():
     for channel in main_guild.channels:
         if channel.name == auth.BOT_CHANNEL:
             audit_channel = channel
-    print("Logged in as {0.user.name}#{0.user.discriminator} and bound to #{1.name}".format(client, audit_channel))
+    print("Logged in as {0.user} and bound to #{1.name}".format(client, audit_channel))
 
 
 if __name__ == "__main__":
