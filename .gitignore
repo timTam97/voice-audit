@@ -2,3 +2,5 @@
 .idea/
 
 auth.py
+
+test*.py
