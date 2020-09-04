@@ -86,22 +86,21 @@ async def diff_voice(
 async def on_voice_state_update(
     member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
 ):
-    all_members = []
-    for channel in main_guild.voice_channels:
-        all_members.append(channel.members)
-    member_count = sum(map(lambda x: len(x), all_members))
-
-    the_date = datetime.datetime.now().strftime("%H:%M, %A %d %B %Y")
     await check_audit_log()
-
     trigger = False
     embed_dict = {}
     field_dict = {}
     trigger, embed_dict, field_dict = await diff_voice(
         before, after, trigger, embed_dict, field_dict
     )
-
     if trigger:
+        the_date = datetime.datetime.now().strftime("%H:%M, %A %d %B %Y")
+        member_count = sum(
+            map(
+                lambda x: len(x),
+                [channel.members for channel in main_guild.voice_channels],
+            )
+        )
         await audit_channel.send(
             embed=discord.Embed(**embed_dict)
             .add_field(**field_dict, name=member.name)
@@ -119,9 +118,9 @@ async def on_ready():
         if guild.name == auth.SERVER_NAME:
             main_guild = guild
     for channel in main_guild.channels:
-        if channel.name == "voice-logs":
+        if channel.name == auth.BOT_CHANNEL:
             audit_channel = channel
-    print("ready.")
+    print("Logged in as {0.user.name}#{0.user.discriminator} and bound to #{1.name}".format(client, audit_channel))
 
 
 if __name__ == "__main__":
