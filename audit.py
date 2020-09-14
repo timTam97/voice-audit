@@ -1,5 +1,6 @@
 import datetime
-from typing import Tuple, Dict
+from math import floor
+from typing import Dict, Tuple
 
 import discord
 
@@ -8,6 +9,7 @@ import auth
 client = discord.Client()
 audit_channel: discord.TextChannel = None
 main_guild: discord.Guild = None
+member_time: Dict = {}
 
 
 async def check_audit_log() -> None:
@@ -59,27 +61,32 @@ async def check_audit_log() -> None:
 async def diff_voice(
     before: discord.VoiceState,
     after: discord.VoiceState,
-    trigger: bool,
     embed_data: Dict,
     field_data: Dict,
-) -> Tuple[bool, Dict, Dict]:
+) -> Tuple[bool, bool, bool, dict, dict]:
+    global member_time
     prev_voice = before.channel
     next_voice = after.channel
+    trigger = False
+    join = False
+    leave = False
     if prev_voice != next_voice:
         if prev_voice is None:
             embed_data["title"] = "User Join"
             embed_data["color"] = 0x00FF00
             field_data["value"] = next_voice.name
+            join = True
         elif next_voice is None:
             embed_data["title"] = "User Left"
             embed_data["color"] = 0xFF0000
             field_data["value"] = prev_voice.name
+            leave = True
         elif prev_voice is not None and next_voice is not None:
             embed_data["title"] = "User Moved"
             embed_data["color"] = 0x00FFFF
             field_data["value"] = prev_voice.name + " ➡ " + next_voice.name
         trigger = True
-    return trigger, embed_data, field_data
+    return trigger, join, leave, embed_data, field_data
 
 
 @client.event
@@ -87,11 +94,10 @@ async def on_voice_state_update(
     member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
 ):
     await check_audit_log()
-    trigger = False
     embed_dict = {}
     field_dict = {}
-    trigger, embed_dict, field_dict = await diff_voice(
-        before, after, trigger, embed_dict, field_dict
+    trigger, join, leave, embed_dict, field_dict = await diff_voice(
+        before, after, embed_dict, field_dict
     )
     if trigger:
         the_date = datetime.datetime.now().strftime("%H:%M, %A %d %B %Y")
@@ -101,12 +107,19 @@ async def on_voice_state_update(
                 [channel.members for channel in main_guild.voice_channels],
             )
         )
+        update = "{}\n{} in all voice channels".format(the_date, member_count)
+        if join:
+            member_time[str(member)] = datetime.datetime.now()
+        elif leave:
+            if (join_time := member_time.get(str(member))) is not None:
+                delta = datetime.timedelta(
+                    seconds=floor((datetime.datetime.now() - join_time).total_seconds())
+                )
+                update += "\nDuration: {}".format(delta)
         await audit_channel.send(
             embed=discord.Embed(**embed_dict)
             .add_field(**field_dict, name=member.name)
-            .set_footer(
-                text="{}\n{} in all voice channels".format(the_date, member_count)
-            )
+            .set_footer(text=update)
         )
 
 
