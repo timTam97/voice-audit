@@ -111,7 +111,8 @@ async def on_voice_state_update(
         if join:
             member_time[str(member)] = datetime.datetime.now()
         elif leave:
-            if (join_time := member_time.get(str(member))) is not None:
+            join_time = member_time.get(str(member))
+            if join_time is not None:
                 delta = datetime.timedelta(
                     seconds=floor((datetime.datetime.now() - join_time).total_seconds())
                 )
