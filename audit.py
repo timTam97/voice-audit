@@ -61,8 +61,6 @@ async def check_audit_log() -> None:
 async def diff_voice(
     before: discord.VoiceState,
     after: discord.VoiceState,
-    embed_data: Dict,
-    field_data: Dict,
 ) -> Tuple[bool, bool, bool, dict, dict]:
     global member_time
     prev_voice = before.channel
@@ -70,6 +68,8 @@ async def diff_voice(
     trigger = False
     join = False
     leave = False
+    embed_data = {}
+    field_data = {}
     if prev_voice != next_voice:
         if prev_voice is None:
             embed_data["title"] = "User Join"
@@ -94,10 +94,8 @@ async def on_voice_state_update(
     member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
 ):
     await check_audit_log()
-    embed_dict = {}
-    field_dict = {}
     trigger, join, leave, embed_dict, field_dict = await diff_voice(
-        before, after, embed_dict, field_dict
+        before, after
     )
     if trigger:
         the_date = datetime.datetime.now().strftime("%H:%M, %A %d %B %Y")
