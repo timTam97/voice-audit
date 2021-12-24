@@ -6,7 +6,7 @@ import discord
 
 import auth
 
-client = discord.Client()
+client = discord.Client(Intents=discord.Intents(voice_states=True))
 audit_channel: discord.TextChannel = None
 main_guild: discord.Guild = None
 member_time: Dict = {}
@@ -94,11 +94,11 @@ async def on_voice_state_update(
     member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
 ):
     await check_audit_log()
-    trigger, join, leave, embed_dict, field_dict = await diff_voice(
-        before, after
-    )
+    trigger, join, leave, embed_dict, field_dict = await diff_voice(before, after)
     if trigger:
         the_date = datetime.datetime.now().strftime("%H:%M, %A %d %B %Y")
+        if datetime.date.today().month == 12 and datetime.date.today().day == 25:
+            the_date += " 🎄"
         member_count = sum(
             map(
                 lambda x: len(x),
